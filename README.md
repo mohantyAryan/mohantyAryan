@@ -1,7 +1,7 @@
 - 👋 Hi, I’m Aryan Mohanty
-- 👀 I’m interested in Computer Science and Artificial Intelligence / Machine Learning
-- 🌱 I’m currently studying as a freshman in high school
-- 💞️ My current goal is to get into Stanford with CS
+- 👀 I’m interested in Mechanical Systems and Artificial Intelligence / Machine Learning
+- 🌱 I’m currently studying as a junior in high school
+- 💞️ My current goal is to get into GeorgiaTech with MechE
 - 📫 How to reach me: mohanty.aryan.09@gmail.com
 
 <!---
