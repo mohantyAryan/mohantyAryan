@@ -1,0 +1,18 @@
+# Core
+anthropic>=0.40.0
+python-dotenv>=1.0.0
+
+# Text-to-speech (offline — default)
+pyttsx3>=2.90
+
+# Text-to-speech (Google, British accent — optional, use --tts gtts)
+gTTS>=2.5.0
+pygame>=2.5.0
+
+# Speech-to-text (voice input — use --voice flag)
+SpeechRecognition>=3.10.0
+# PyAudio is required by SpeechRecognition for microphone access.
+# On Linux:  sudo apt install portaudio19-dev && pip install pyaudio
+# On macOS:  brew install portaudio && pip install pyaudio
+# On Windows: pip install pyaudio  (usually works out of the box)
+pyaudio>=0.2.14
