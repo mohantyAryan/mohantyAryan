@@ -102,11 +102,13 @@ def run(voice_mode: bool, tts_engine: str, mute: bool, backend: str = "groq"):
             "greet me personally — use my name if you know it, and briefly "
             "reference something we discussed before. Keep it natural and brief."
         )
+        # Generate greeting WITHOUT adding the resume prompt to saved history
         for sentence in assistant.chat(resume_prompt):
             print(sentence + " ", end="", flush=True)
             tts.speak(sentence)
         print()
-        save_memory(assistant.history)
+        # Remove the resume prompt + greeting from history so it doesn't pollute memory
+        assistant.history = assistant.history[:-2]
     else:
         greeting = (
             "Good day, sir. J.A.R.V.I.S. online. All systems nominal. "
