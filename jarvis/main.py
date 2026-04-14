@@ -7,19 +7,16 @@ import sys
 from .assistant import ClaudeAssistant, GeminiAssistant, GroqAssistant
 from .voice import STTEngine, TTSEngine
 
-BANNER = r"""
-  ____  _   _    _    ____  __     _____ ____
- / ___|| | | |  / \  |  _ \ \ \   / /_ _/ ___|
- \___ \| |_| | / _ \ | |_) | \ \ / / | |\___ \
-  ___) |  _  |/ ___ \|  _ <   \ V /  | | ___) |
- |____/|_| |_/_/   \_\_| \_\   \_/  |___|____/
-
-  Just A Rather Very Intelligent System
-  ─────────────────────────────────────────
-  Commands : exit / quit / reset
-  Voice    : --voice flag to enable mic input
-  Mute     : --mute flag to disable speech output
-  Backend  : --backend groq (default) | gemini | claude
+BANNER = """
+  ================================================
+    J . A . R . V . I . S .
+    Just A Rather Very Intelligent System
+  ================================================
+    Commands : exit / quit / reset
+    Voice    : --voice flag to enable mic input
+    Mute     : --mute flag to disable speech output
+    Backend  : --backend groq (default) | gemini | claude
+  ================================================
 """
 
 
