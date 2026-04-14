@@ -4,8 +4,6 @@ import os
 import re
 from typing import Iterator
 
-import anthropic
-
 JARVIS_SYSTEM_PROMPT = """You are J.A.R.V.I.S. (Just A Rather Very Intelligent System), a highly advanced artificial intelligence assistant. You serve your user with unwavering loyalty, precision, and a touch of refined British wit.
 
 PERSONALITY AND TONE:
@@ -59,6 +57,8 @@ class ClaudeAssistant:
     """Jarvis backed by Claude (Anthropic)."""
 
     def __init__(self, api_key: str = None):
+        import anthropic
+        self.anthropic = anthropic
         self.client = anthropic.Anthropic(
             api_key=api_key or os.environ.get("ANTHROPIC_API_KEY")
         )
@@ -85,10 +85,10 @@ class ClaudeAssistant:
                     full_response += sentence + " "
                     yield sentence
 
-        except anthropic.AuthenticationError:
+        except self.anthropic.AuthenticationError:
             yield "I'm unable to connect, sir. The API key appears to be invalid."
             return
-        except anthropic.APIError as e:
+        except self.anthropic.APIError as e:
             yield f"I've encountered an error, sir. {e}"
             return
 
