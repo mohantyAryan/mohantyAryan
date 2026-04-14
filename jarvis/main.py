@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 
-from .assistant import JarvisAssistant
+from .assistant import ClaudeAssistant, GeminiAssistant
 from .voice import STTEngine, TTSEngine
 
 BANNER = r"""
@@ -15,11 +15,11 @@ BANNER = r"""
  |____/|_| |_/_/   \_\_| \_\   \_/  |___|____/
 
   Just A Rather Very Intelligent System
-  Powered by Claude (Anthropic)
   ─────────────────────────────────────────
   Commands : exit / quit / reset
   Voice    : --voice flag to enable mic input
   Mute     : --mute flag to disable speech output
+  Backend  : --backend claude (default) | gemini
 """
 
 
@@ -31,17 +31,27 @@ def _print_you(text: str):
     print(f"\033[93mYou\033[0m     {text}")
 
 
-def run(voice_mode: bool, tts_engine: str, mute: bool):
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        print(
-            "\n[ERROR] ANTHROPIC_API_KEY is not set.\n"
-            "Add it to a .env file or export it in your shell:\n"
-            "  export ANTHROPIC_API_KEY=your_key_here\n"
-        )
-        sys.exit(1)
-
-    assistant = JarvisAssistant(api_key=api_key)
+def run(voice_mode: bool, tts_engine: str, mute: bool, backend: str = "claude"):
+    if backend == "gemini":
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            print(
+                "\n[ERROR] GEMINI_API_KEY is not set.\n"
+                "Add it to a .env file or export it in your shell:\n"
+                "  export GEMINI_API_KEY=your_key_here\n"
+            )
+            sys.exit(1)
+        assistant = GeminiAssistant(api_key=api_key)
+    else:
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            print(
+                "\n[ERROR] ANTHROPIC_API_KEY is not set.\n"
+                "Add it to a .env file or export it in your shell:\n"
+                "  export ANTHROPIC_API_KEY=your_key_here\n"
+            )
+            sys.exit(1)
+        assistant = ClaudeAssistant(api_key=api_key)
     tts = TTSEngine(engine=tts_engine, mute=mute)
     stt = STTEngine() if voice_mode else None
 
@@ -131,9 +141,15 @@ def main():
         default="pyttsx3",
         help="TTS engine: pyttsx3 (offline, default) or gtts (Google, British accent)",
     )
+    parser.add_argument(
+        "--backend",
+        choices=["gemini", "claude"],
+        default="gemini",
+        help="AI backend: gemini (default, uses GEMINI_API_KEY) or claude (uses ANTHROPIC_API_KEY)",
+    )
     args = parser.parse_args()
 
-    run(voice_mode=args.voice, tts_engine=args.tts, mute=args.mute)
+    run(voice_mode=args.voice, tts_engine=args.tts, mute=args.mute, backend=args.backend)
 
 
 if __name__ == "__main__":

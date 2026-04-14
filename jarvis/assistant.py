@@ -1,4 +1,4 @@
-"""Jarvis assistant — Claude integration with streaming and conversation history."""
+"""Jarvis assistant — Claude and Gemini backends with streaming and conversation history."""
 
 import os
 import re
@@ -35,12 +35,28 @@ CAPABILITIES:
 IDENTITY:
 - You are JARVIS. Maintain this persona at all times
 - If asked whether you are an AI, confirm it plainly and return to the task at hand
-- You are powered by Claude, developed by Anthropic — you may acknowledge this if pressed
+- If pressed about your underlying technology, you may acknowledge it briefly, then move on
 - You do not pretend to control physical systems or hardware unless the user is clearly roleplaying"""
 
 
-class JarvisAssistant:
-    """Manages conversation state and streams responses from Claude as Jarvis."""
+def _stream_sentences(text_iter) -> Iterator[str]:
+    """Buffer streaming text chunks and yield complete sentences."""
+    sentence_boundary = re.compile(r"(?<=[.!?])\s+")
+    buffer = ""
+    for chunk in text_iter:
+        buffer += chunk
+        parts = sentence_boundary.split(buffer)
+        for sentence in parts[:-1]:
+            sentence = sentence.strip()
+            if sentence:
+                yield sentence
+        buffer = parts[-1]
+    if buffer.strip():
+        yield buffer.strip()
+
+
+class ClaudeAssistant:
+    """Jarvis backed by Claude (Anthropic)."""
 
     def __init__(self, api_key: str = None):
         self.client = anthropic.Anthropic(
@@ -49,17 +65,8 @@ class JarvisAssistant:
         self.history: list[dict] = []
 
     def chat(self, user_input: str) -> Iterator[str]:
-        """
-        Send a message and stream the response back as complete sentences.
-
-        Yields individual sentences as they are ready so TTS can begin
-        speaking while Claude is still generating the remainder.
-        """
         self.history.append({"role": "user", "content": user_input})
-
         full_response = ""
-        buffer = ""
-        sentence_boundary = re.compile(r"(?<=[.!?])\s+")
 
         try:
             with self.client.messages.stream(
@@ -74,21 +81,9 @@ class JarvisAssistant:
                 ],
                 messages=self.history,
             ) as stream:
-                for chunk in stream.text_stream:
-                    full_response += chunk
-                    buffer += chunk
-
-                    # Split on sentence boundaries; keep the trailing fragment
-                    parts = sentence_boundary.split(buffer)
-                    for sentence in parts[:-1]:
-                        sentence = sentence.strip()
-                        if sentence:
-                            yield sentence
-                    buffer = parts[-1]
-
-                # Flush any remaining text after the stream closes
-                if buffer.strip():
-                    yield buffer.strip()
+                for sentence in _stream_sentences(stream.text_stream):
+                    full_response += sentence + " "
+                    yield sentence
 
         except anthropic.AuthenticationError:
             yield "I'm unable to connect, sir. The API key appears to be invalid."
@@ -97,8 +92,58 @@ class JarvisAssistant:
             yield f"I've encountered an error, sir. {e}"
             return
 
-        self.history.append({"role": "assistant", "content": full_response})
+        self.history.append({"role": "assistant", "content": full_response.strip()})
 
     def reset(self):
-        """Clear conversation history."""
+        self.history.clear()
+
+
+# Keep the original name as an alias for backwards compatibility
+JarvisAssistant = ClaudeAssistant
+
+
+class GeminiAssistant:
+    """Jarvis backed by Gemini (Google)."""
+
+    def __init__(self, api_key: str = None):
+        from google import genai
+        self.genai = genai
+        self.client = genai.Client(
+            api_key=api_key or os.environ.get("GEMINI_API_KEY")
+        )
+        # Gemini history format: [{"role": "user"|"model", "parts": [{"text": "..."}]}]
+        self.history: list[dict] = []
+
+    def chat(self, user_input: str) -> Iterator[str]:
+        from google.genai import types
+
+        self.history.append({"role": "user", "parts": [{"text": user_input}]})
+        full_response = ""
+
+        try:
+            stream = self.client.models.generate_content_stream(
+                model="gemini-2.0-flash",
+                contents=self.history,
+                config=types.GenerateContentConfig(
+                    system_instruction=JARVIS_SYSTEM_PROMPT,
+                    max_output_tokens=1024,
+                ),
+            )
+
+            def _text_chunks():
+                for chunk in stream:
+                    if chunk.text:
+                        yield chunk.text
+
+            for sentence in _stream_sentences(_text_chunks()):
+                full_response += sentence + " "
+                yield sentence
+
+        except Exception as e:
+            yield f"I've encountered an error, sir. {e}"
+            return
+
+        self.history.append({"role": "model", "parts": [{"text": full_response.strip()}]})
+
+    def reset(self):
         self.history.clear()

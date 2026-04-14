@@ -1,6 +1,9 @@
 # Core
-anthropic>=0.40.0
 python-dotenv>=1.0.0
+
+# AI backends (install whichever you use)
+google-genai>=1.0.0        # Gemini (default backend)
+anthropic>=0.40.0          # Claude (optional, use --backend claude)
 
 # Text-to-speech (offline — default)
 pyttsx3>=2.90
