@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 
-from .assistant import ClaudeAssistant, GeminiAssistant
+from .assistant import ClaudeAssistant, GeminiAssistant, GroqAssistant
 from .voice import STTEngine, TTSEngine
 
 BANNER = r"""
@@ -19,7 +19,7 @@ BANNER = r"""
   Commands : exit / quit / reset
   Voice    : --voice flag to enable mic input
   Mute     : --mute flag to disable speech output
-  Backend  : --backend claude (default) | gemini
+  Backend  : --backend groq (default) | gemini | claude
 """
 
 
@@ -31,8 +31,18 @@ def _print_you(text: str):
     print(f"\033[93mYou\033[0m     {text}")
 
 
-def run(voice_mode: bool, tts_engine: str, mute: bool, backend: str = "claude"):
-    if backend == "gemini":
+def run(voice_mode: bool, tts_engine: str, mute: bool, backend: str = "groq"):
+    if backend == "groq":
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key:
+            print(
+                "\n[ERROR] GROQ_API_KEY is not set.\n"
+                "Add it to a .env file or export it in your shell:\n"
+                "  export GROQ_API_KEY=your_key_here\n"
+            )
+            sys.exit(1)
+        assistant = GroqAssistant(api_key=api_key)
+    elif backend == "gemini":
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             print(
@@ -143,9 +153,9 @@ def main():
     )
     parser.add_argument(
         "--backend",
-        choices=["gemini", "claude"],
-        default="gemini",
-        help="AI backend: gemini (default, uses GEMINI_API_KEY) or claude (uses ANTHROPIC_API_KEY)",
+        choices=["groq", "gemini", "claude"],
+        default="groq",
+        help="AI backend: groq (default, uses GROQ_API_KEY), gemini (uses GEMINI_API_KEY), claude (uses ANTHROPIC_API_KEY)",
     )
     args = parser.parse_args()
 

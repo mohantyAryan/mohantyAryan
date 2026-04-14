@@ -102,6 +102,49 @@ class ClaudeAssistant:
 JarvisAssistant = ClaudeAssistant
 
 
+class GroqAssistant:
+    """Jarvis backed by Groq (free, fast, Llama 3.3 70B)."""
+
+    def __init__(self, api_key: str = None):
+        from groq import Groq
+        self.client = Groq(api_key=api_key or os.environ.get("GROQ_API_KEY"))
+        # History excludes the system prompt — it's injected fresh each call
+        self.history: list[dict] = []
+
+    def chat(self, user_input: str) -> Iterator[str]:
+        self.history.append({"role": "user", "content": user_input})
+        full_response = ""
+
+        messages = [{"role": "system", "content": JARVIS_SYSTEM_PROMPT}] + self.history
+
+        try:
+            stream = self.client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                max_tokens=1024,
+                stream=True,
+            )
+
+            def _text_chunks():
+                for chunk in stream:
+                    text = chunk.choices[0].delta.content or ""
+                    if text:
+                        yield text
+
+            for sentence in _stream_sentences(_text_chunks()):
+                full_response += sentence + " "
+                yield sentence
+
+        except Exception as e:
+            yield f"I've encountered an error, sir. {e}"
+            return
+
+        self.history.append({"role": "assistant", "content": full_response.strip()})
+
+    def reset(self):
+        self.history.clear()
+
+
 class GeminiAssistant:
     """Jarvis backed by Gemini (Google)."""
 

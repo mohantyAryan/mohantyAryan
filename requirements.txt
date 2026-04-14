@@ -2,7 +2,8 @@
 python-dotenv>=1.0.0
 
 # AI backends (install whichever you use)
-google-genai>=1.0.0        # Gemini (default backend)
+groq>=0.9.0                # Groq/Llama (default backend — free, fast)
+google-genai>=1.0.0        # Gemini (optional, use --backend gemini)
 anthropic>=0.40.0          # Claude (optional, use --backend claude)
 
 # Text-to-speech (offline — default)
