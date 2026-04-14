@@ -9,8 +9,8 @@ from pathlib import Path
 from .assistant import ClaudeAssistant, GeminiAssistant, GroqAssistant
 from .voice import STTEngine, TTSEngine
 
-# Memory is stored in memory.json in the project root (next to run_jarvis.py)
-MEMORY_FILE = Path(__file__).parent.parent / "memory.json"
+# Memory is stored in memory.json in whatever folder Jarvis is run from
+MEMORY_FILE = Path("memory.json")
 MAX_MEMORY_MESSAGES = 200  # Keep last 200 messages (~100 exchanges)
 
 
