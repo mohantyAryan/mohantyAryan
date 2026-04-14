@@ -9,8 +9,8 @@ from pathlib import Path
 from .assistant import ClaudeAssistant, GeminiAssistant, GroqAssistant
 from .voice import STTEngine, TTSEngine
 
-# Memory is stored in memory.json in whatever folder Jarvis is run from
-MEMORY_FILE = Path("memory.json")
+# Memory is stored in memory.json in the project root (resolved absolutely)
+MEMORY_FILE = Path(__file__).resolve().parent.parent / "memory.json"
 MAX_MEMORY_MESSAGES = 200  # Keep last 200 messages (~100 exchanges)
 
 
@@ -29,10 +29,11 @@ def save_memory(history: list):
     """Save conversation history to disk, trimmed to the last MAX_MEMORY_MESSAGES."""
     trimmed = history[-MAX_MEMORY_MESSAGES:]
     try:
+        MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(MEMORY_FILE, "w", encoding="utf-8") as f:
             json.dump(trimmed, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        print(f"\n[JARVIS] Warning: memory could not be saved. {e}")
+        print(f"\n[JARVIS] Warning: memory could not be saved to {MEMORY_FILE}. Error: {e}")
 
 BANNER = """
   ================================================
