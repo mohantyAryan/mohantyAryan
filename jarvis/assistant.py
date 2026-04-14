@@ -122,7 +122,7 @@ class GeminiAssistant:
 
         try:
             stream = self.client.models.generate_content_stream(
-                model="gemini-1.5-flash",
+                model="gemini-2.0-flash-lite",
                 contents=self.history,
                 config=types.GenerateContentConfig(
                     system_instruction=JARVIS_SYSTEM_PROMPT,
