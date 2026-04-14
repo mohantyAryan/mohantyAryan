@@ -1,11 +1,38 @@
 """J.A.R.V.I.S. — main entry point and conversation loop."""
 
 import argparse
+import json
 import os
 import sys
+from pathlib import Path
 
 from .assistant import ClaudeAssistant, GeminiAssistant, GroqAssistant
 from .voice import STTEngine, TTSEngine
+
+# Memory is stored in memory.json in the project root (next to run_jarvis.py)
+MEMORY_FILE = Path(__file__).parent.parent / "memory.json"
+MAX_MEMORY_MESSAGES = 200  # Keep last 200 messages (~100 exchanges)
+
+
+def load_memory() -> list:
+    """Load conversation history from disk."""
+    if MEMORY_FILE.exists():
+        try:
+            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+
+def save_memory(history: list):
+    """Save conversation history to disk, trimmed to the last MAX_MEMORY_MESSAGES."""
+    trimmed = history[-MAX_MEMORY_MESSAGES:]
+    try:
+        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(trimmed, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"\n[JARVIS] Warning: memory could not be saved. {e}")
 
 BANNER = """
   ================================================
@@ -38,7 +65,7 @@ def run(voice_mode: bool, tts_engine: str, mute: bool, backend: str = "groq"):
                 "  export GROQ_API_KEY=your_key_here\n"
             )
             sys.exit(1)
-        assistant = GroqAssistant(api_key=api_key)
+        assistant = GroqAssistant(api_key=api_key, initial_history=load_memory())
     elif backend == "gemini":
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
@@ -48,7 +75,7 @@ def run(voice_mode: bool, tts_engine: str, mute: bool, backend: str = "groq"):
                 "  export GEMINI_API_KEY=your_key_here\n"
             )
             sys.exit(1)
-        assistant = GeminiAssistant(api_key=api_key)
+        assistant = GeminiAssistant(api_key=api_key, initial_history=load_memory())
     else:
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
@@ -58,18 +85,35 @@ def run(voice_mode: bool, tts_engine: str, mute: bool, backend: str = "groq"):
                 "  export ANTHROPIC_API_KEY=your_key_here\n"
             )
             sys.exit(1)
-        assistant = ClaudeAssistant(api_key=api_key)
+        assistant = ClaudeAssistant(api_key=api_key, initial_history=load_memory())
+
     tts = TTSEngine(engine=tts_engine, mute=mute)
     stt = STTEngine() if voice_mode else None
 
     print(BANNER)
 
-    greeting = (
-        "Good day, sir. J.A.R.V.I.S. online. All systems nominal. "
-        "How may I assist you?"
-    )
-    _print_jarvis(greeting)
-    tts.speak(greeting)
+    # Personalized greeting if memory exists, standard greeting if not
+    if assistant.history:
+        print("\n\033[90m[Resuming previous session...]\033[0m")
+        print("\n\033[96mJARVIS\033[0m  ", end="", flush=True)
+        resume_prompt = (
+            "You are resuming our conversation after some time apart. "
+            "Based on what you know about me from our previous discussions, "
+            "greet me personally — use my name if you know it, and briefly "
+            "reference something we discussed before. Keep it natural and brief."
+        )
+        for sentence in assistant.chat(resume_prompt):
+            print(sentence + " ", end="", flush=True)
+            tts.speak(sentence)
+        print()
+        save_memory(assistant.history)
+    else:
+        greeting = (
+            "Good day, sir. J.A.R.V.I.S. online. All systems nominal. "
+            "How may I assist you?"
+        )
+        _print_jarvis(greeting)
+        tts.speak(greeting)
 
     while True:
         try:
@@ -79,10 +123,10 @@ def run(voice_mode: bool, tts_engine: str, mute: bool, backend: str = "groq"):
             print()
             _print_jarvis(farewell)
             tts.speak(farewell)
+            save_memory(assistant.history)
             break
 
         if user_input is None:
-            # Microphone returned nothing — just loop
             continue
 
         user_input = user_input.strip()
@@ -93,11 +137,13 @@ def run(voice_mode: bool, tts_engine: str, mute: bool, backend: str = "groq"):
             farewell = "Understood, sir. Shutting down. Good day."
             _print_jarvis(farewell)
             tts.speak(farewell)
+            save_memory(assistant.history)
             break
 
         if user_input.lower() in ("reset", "clear"):
             assistant.reset()
-            msg = "Conversation history cleared, sir. Starting fresh."
+            MEMORY_FILE.unlink(missing_ok=True)
+            msg = "Memory wiped, sir. Starting with a clean slate."
             _print_jarvis(msg)
             tts.speak(msg)
             continue
@@ -107,7 +153,8 @@ def run(voice_mode: bool, tts_engine: str, mute: bool, backend: str = "groq"):
         for sentence in assistant.chat(user_input):
             print(sentence + " ", end="", flush=True)
             tts.speak(sentence)
-        print()  # newline after full response
+        print()
+        save_memory(assistant.history)  # Save after every response
 
 
 def _get_input(voice_mode: bool, stt, tts) -> str | None:

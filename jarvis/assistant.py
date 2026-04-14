@@ -56,13 +56,13 @@ def _stream_sentences(text_iter) -> Iterator[str]:
 class ClaudeAssistant:
     """Jarvis backed by Claude (Anthropic)."""
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str = None, initial_history: list = None):
         import anthropic
         self.anthropic = anthropic
         self.client = anthropic.Anthropic(
             api_key=api_key or os.environ.get("ANTHROPIC_API_KEY")
         )
-        self.history: list[dict] = []
+        self.history: list[dict] = list(initial_history) if initial_history else []
 
     def chat(self, user_input: str) -> Iterator[str]:
         self.history.append({"role": "user", "content": user_input})
@@ -105,11 +105,11 @@ JarvisAssistant = ClaudeAssistant
 class GroqAssistant:
     """Jarvis backed by Groq (free, fast, Llama 3.3 70B)."""
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str = None, initial_history: list = None):
         from groq import Groq
         self.client = Groq(api_key=api_key or os.environ.get("GROQ_API_KEY"))
         # History excludes the system prompt — it's injected fresh each call
-        self.history: list[dict] = []
+        self.history: list[dict] = list(initial_history) if initial_history else []
 
     def chat(self, user_input: str) -> Iterator[str]:
         self.history.append({"role": "user", "content": user_input})
@@ -148,14 +148,14 @@ class GroqAssistant:
 class GeminiAssistant:
     """Jarvis backed by Gemini (Google)."""
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str = None, initial_history: list = None):
         from google import genai
         self.genai = genai
         self.client = genai.Client(
             api_key=api_key or os.environ.get("GEMINI_API_KEY")
         )
         # Gemini history format: [{"role": "user"|"model", "parts": [{"text": "..."}]}]
-        self.history: list[dict] = []
+        self.history: list[dict] = list(initial_history) if initial_history else []
 
     def chat(self, user_input: str) -> Iterator[str]:
         from google.genai import types
